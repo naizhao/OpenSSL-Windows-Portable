@@ -100,7 +100,7 @@ jobs:
       working-directory: ${{ env.SOURCE_DIR }} # 进入源码目录
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        perl Configure VC-WIN64A no-shared no-tests --prefix="%INSTALL_DIR%" --openssldir="%INSTALL_DIR%/ssl"
+        perl Configure VC-WIN64A no-shared no-tests --prefix="%INSTALL_DIR%" --openssldir="./ssl"
 
     - name: Compile OpenSSL # 编译 OpenSSL
       shell: cmd
@@ -152,6 +152,13 @@ jobs:
 
         # 删除下载的临时文件
         Remove-Item $downloadPath
+
+    - name: Remove PDB files # Remove debugging symbol files
+      shell: pwsh
+      run: |
+        Write-Host "Searching for and removing .pdb files in ${{ env.INSTALL_DIR }}"
+        Get-ChildItem -Path ${{ env.INSTALL_DIR }} -Recurse -Filter *.pdb | Remove-Item -Force -Verbose
+        Write-Host "Finished removing .pdb files."
 
     - name: Create ZIP package # 打包编译结果
       shell: pwsh
