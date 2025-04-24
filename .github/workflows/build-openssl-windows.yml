@@ -1,0 +1,182 @@
+name: Build OpenSSL for Windows x64
+
+on:
+  workflow_dispatch:
+    inputs:
+      openssl_version:
+        description: 'OpenSSL version tag to build (e.g., 3.2.1, 3.0.13). The workflow will checkout tag openssl-<version>.'
+        required: true
+        type: string
+
+env:
+  # 安装目录，编译结果将放在这里
+  INSTALL_DIR: ${{ github.workspace }}/openssl_install
+  # OpenSSL 源码目录
+  SOURCE_DIR: ${{ github.workspace }}/openssl_src
+  # 自定义 CA 证书内容
+  CUSTOM_CA_CERTS: |
+    ServBay Public CA - ECC Root
+    ============================
+    -----BEGIN CERTIFICATE-----
+    MIICiTCCAhCgAwIBAgIUT5dFz1gzPuc7C4D6isnIUcikNCIwCgYIKoZIzj0EAwMw
+    dDELMAkGA1UEBhMCVVMxFDASBgNVBAoMC1NlcnZCYXkgTExDMSgwJgYDVQQLDB9T
+    ZXJ2QmF5IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MSUwIwYDVQQDDBxTZXJ2QmF5
+    IFB1YmxpYyBDQSAtIEVDQyBSb290MB4XDTI0MDgzMTA4MjI0NFoXDTQ5MDgyNTA4
+    MjI0NFowdDELMAkGA1UEBhMCVVMxFDASBgNVBAoMC1NlcnZCYXkgTExDMSgwJgYD
+    VQQLDB9TZXJ2QmF5IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MSUwIwYDVQQDDBxT
+    ZXJ2QmF5IFB1YmxpYyBDQSAtIEVDQyBSb290MHYwEAYHKoZIzj0CAQYFK4EEACID
+    YgAEt60xnGil2EWA3fzjU3wem8V5hXfzyR6/qH7zUoTuOMHbzc/j3VNGprVNdhy4
+    K0vt2YGH/JluGtDxOWG6UxmPtXmTe+giRuBzxZGJW2BWu7I+BaX2j53UXerptA1O
+    IKmYo2MwYTAdBgNVHQ4EFgQUbYrZRJhR2Bq6R4Oxs2MJk+Xdg7AwHwYDVR0jBBgw
+    FoAUbYrZRJhR2Bq6R4Oxs2MJk+Xdg7AwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8B
+    Af8EBAMCAYYwCgYIKoZIzj0EAwMDZwAwZAIwLtd2YoarROMVFnI+UXdpxXm81HrR
+    /v05xQBtA1CGjZmr7/1SQFlvF/sGPcCE6ARPAjAzRHbEQyAx+1tE7nPHfdmZgORH
+    78NPjvZHSA+92+PdYy9xb4VHcTAmeYQ5zY7skAY=
+    -----END CERTIFICATE-----
+
+    ServBay Public CA - RSA Root
+    ============================
+    -----BEGIN CERTIFICATE-----
+    MIIF2TCCA8GgAwIBAgIUOSlx/igTZ7SNBKxPQA2H/e4huokwDQYJKoZIhvcNAQEM
+    BQAwdDELMAkGA1UEBhMCVVMxFDASBgNVBAoMC1NlcnZCYXkgTExDMSgwJgYDVQQL
+    DB9TZXJ2QmF5IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MSUwIwYDVQQDDBxT
+    ZXJ2QmF5IFB1YmxpYyBDQSAtIFJTQSBSb290MB4XDTI0MDgzMTA4MjI0N1oXDTQ5
+    MDgyNTA4MjI0N1owdDELMAkGA1UEBhMCVVMxFDASBgNVBAoMC1NlcnZCYXkgTExD
+    MSgwJgYDVQQLDB9TZXJ2QmF5IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MSUwIwYD
+    VQQDDBxTZXJ2QmF5IFB1YmxpYyBDQSAtIFJTQSBSb290MIICIjANBgkqhkiG9w0B
+    AQEFAAOCAg8AMIICCgKCAgEAwoYNDpxs5Z2nzbvW1WVt0YOfkXJYnNQLR11i6Sls
+    j2G9fjsiKINNe6ByFbxJK64/VdLnOVfIZrlM66IYvRreH8keSlqAvuZMEBbfR+Qk
+    KBoTZ/fjYTusx5HxjY1AiGtP4W2MWcKeE4szrlAG0gY1KjVN66ZTuUeNnJgvLGKT
+    76qFZI6z1aLPMaM7YSNd8inICnd0WfScfZcptFonQ6xij1nODStu19qdCqp3S16U
+    dJzn62dEK+NYB2rF2uurD7zJ3P/F0nw8CpMDwkKrlPrfpxcZlkGNWOfDmffK9Kil
+    5vbke3OSgDH54X5pHZZtKhVhjUIFEFLpS//zqTa87RAtn2mwU5R/89u5jhRXQ1m+
+    dm64BOscqRmbHUW0Hfay1QJ/wvxqi6VfGgLyAKnV3jq/71p61Qol16Ra9oHBlc5Y
+    2Lhlqtf7Np0xA4kV9/XjIOYsSZi4ub4MOZw1LhdkLHPnydVNCPj8H59Y+G0nJd8m
+    3p2hM5Sou24F6k89l5vY41KqE5jBLe6hrDauc6cHn/wlivS3xzVTa+KU7UH7ayeE
+    Zk7Rix/4xOqqsdYzwFb5Rwr8523NWDZ1TKTPYhI1MAecpjsP71e+vrCX7avfM9W0
+    0J/LhW+CZON2L9iKro61+Ge+/R3ssulRYtH1QdllvQz44zCzNajbgG4727egK74i
+    I6kCAwEAAaNjMGEwHQYDVR0OBBYEFDcQzR6tXg3SqoNFPjwR1sczX6GAMB8GA1Ud
+    IwQYMBaAFDcQzR6tXg3SqoNFPjwR1sczX6GAMA8GA1UdEwEB/wQFMAMBAf8wDgYD
+    VR0PAQH/BAQDAgGGMA0GCSqGSIb3DQEBDAUAA4ICAQALWiKMoKKDZaorMdbxs5aG
+    wTny8A+ciRxr/EFQZVIS+5ggiK4TgiabjuAZjqZhpCSHj5QAjPgIixQdLMifZTBs
+    BPSWiKApz2MNDAkQG4U/2H79Rf/0NYwXciHsgxv/gIZZvBC9QAm9zmApZYceeAOh
+    48yz191sMzwCoGRm9soDCOALUv60zU/pMGcySKnb0SvONbBKQz9fw9zdArdsc/Fj
+    L0KdgdLneHsU4d4HMMYc5RdUqQyHuXu3+P43WeiK5XkNr+sreJkfUWPl6zuCftHg
+    W2mUUbY//oKfcmydRRR+PSHb4h4njOZF6s0BIwUTOwRk47NXOj9F2s3vBrarJrJl
+    U1723kJcSPJplobgLzhEfmtDgSAt8S3Pz+Aqbt9vp3PhkUorBzAJJHG9zpoCwNfk
+    UVOAluO8iumiemfDicZRgrp9J/a3Xn72X4VYGWZnc1Ir9HxfFjHyRQSPP8KwFq1I
+    Ruv1CZgHz8mf6dGc1s8Ok5mL9bw3i26cMkV3eyVrniteBozyKwoXt7S9aR5XvxvF
+    bRAx8bFw/0VSydXtIgDs5Kv/kuF4NbaI0Dx2IlaI6mb4uBlU3yKXiPIBvZSQCvHf
+    BRZS9W0K6erKeFN/fFfixuKUPySxs4h28GeFuP2seH/eW/DR7eEKKihN4BRspPvv
+    0+Ge1QgEVYpIwewWjHRyvg==
+    -----END CERTIFICATE-----
+
+jobs:
+  build:
+    runs-on: windows-latest # 使用最新的 Windows Runner
+
+    steps:
+    - name: Checkout workflow repository # 签出当前工作流仓库代码 (可选，但通常需要)
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Strawberry Perl, NASM) # 安装编译依赖
+      run: |
+        choco install strawberryperl nasm --yes --no-progress --limit-output
+        choco feature enable -n=allowGlobalConfirmation # 避免 choco 弹出确认提示
+        # 将 Perl 和 NASM 添加到 PATH (通常 Chocolatey 会自动完成，但显式添加更保险)
+        echo "C:\Strawberry\c\bin;C:\Strawberry\perl\site\bin;C:\Strawberry\perl\bin;C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Checkout OpenSSL source code # 签出指定版本的 OpenSSL 源码
+      uses: actions/checkout@v4
+      with:
+        repository: openssl/openssl
+        # OpenSSL 的 tag 通常是 openssl-x.y.z 格式
+        ref: openssl-${{ github.event.inputs.openssl_version }}
+        path: ${{ env.SOURCE_DIR }} # 指定签出路径
+        submodules: 'recursive' # 如果有子模块，也一并签出
+
+    - name: Configure OpenSSL build # 配置 OpenSSL 编译选项
+      shell: cmd # 使用 cmd 来方便地调用 vcvars64.bat
+      working-directory: ${{ env.SOURCE_DIR }} # 进入源码目录
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" # 设置 MSVC x64 环境
+        perl Configure VC-WIN64A no-shared no-tests --prefix="%INSTALL_DIR%" --openssldir="%INSTALL_DIR%/ssl"
+        # VC-WIN64A: 目标为 64 位 Windows
+        # no-shared: 静态编译 (如果需要动态库，移除此选项)
+        # no-tests: 不编译测试，加快速度
+        # --prefix: 指定 make install 的安装目录
+        # --openssldir: 指定 openssl 配置、证书等文件的目录
+
+    - name: Compile OpenSSL # 编译 OpenSSL
+      shell: cmd
+      working-directory: ${{ env.SOURCE_DIR }}
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" # 确保 MSVC 环境
+        nmake
+
+    - name: Install OpenSSL # 安装 OpenSSL 到指定目录
+      shell: cmd
+      working-directory: ${{ env.SOURCE_DIR }}
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" # 确保 MSVC 环境
+        nmake install_sw # 只安装软件组件，不安装文档
+
+    - name: Update CA certificates # 更新 CA 证书并追加自定义 CA
+      shell: pwsh
+      run: |
+        # 下载最新的 cacert.pem (来自 curl 官方)
+        $cacertUrl = "https://curl.se/ca/cacert.pem"
+        $downloadPath = "${{ env.GITHUB_WORKSPACE }}/cacert.pem.latest"
+        Invoke-WebRequest -Uri $cacertUrl -OutFile $downloadPath
+        Write-Host "Downloaded latest CA bundle to $downloadPath"
+
+        # 检查下载是否成功
+        if (-not (Test-Path $downloadPath) -or (Get-Item $downloadPath).Length -eq 0) {
+          Write-Error "Failed to download cacert.pem from $cacertUrl"
+          exit 1
+        }
+
+        # 将下载的 CA 证书内容和自定义 CA 证书内容写入最终文件
+        $targetCertFile = "${{ env.INSTALL_DIR }}/ssl/cert.pem" # OpenSSL 默认查找的证书文件路径
+        $customCaContent = $env:CUSTOM_CA_CERTS
+
+        # 确保证书目录存在
+        $sslDir = "${{ env.INSTALL_DIR }}/ssl"
+        if (-not (Test-Path $sslDir)) {
+            New-Item -ItemType Directory -Path $sslDir -Force
+            Write-Host "Created directory $sslDir"
+        }
+
+        # 写入最新的 CA 证书
+        Get-Content $downloadPath | Out-File -FilePath $targetCertFile -Encoding utf8
+        Write-Host "Wrote latest CA bundle to $targetCertFile"
+
+        # 追加自定义 CA 证书 (确保在文件末尾有换行符)
+        Add-Content -Path $targetCertFile -Value "`n$customCaContent" -Encoding utf8
+        Write-Host "Appended custom CA certificates to $targetCertFile"
+
+        # 删除下载的临时文件
+        Remove-Item $downloadPath
+
+    - name: Create ZIP package # 打包编译结果
+      shell: pwsh
+      run: |
+        $zipFileName = "openssl-${{ github.event.inputs.openssl_version }}-win-x64.zip"
+        Compress-Archive -Path ${{ env.INSTALL_DIR }}\* -DestinationPath ${{ env.GITHUB_WORKSPACE }}/$zipFileName
+        echo "ZIP_FILE_NAME=$zipFileName" >> $env:GITHUB_ENV # 将 zip 文件名输出到环境变量，供后续步骤使用
+        echo "ZIP_FILE_PATH=${{ env.GITHUB_WORKSPACE }}/$zipFileName" >> $env:GITHUB_ENV # 将 zip 文件路径输出到环境变量
+
+    - name: Create GitHub Release # 创建 GitHub Release 并上传 ZIP 文件
+      uses: softprops/action-gh-release@v2 # 使用社区流行的 Release Action
+      with:
+        tag_name: openssl-${{ github.event.inputs.openssl_version }}-win-x64 # Release 的 tag 名称
+        name: OpenSSL ${{ github.event.inputs.openssl_version }} for Windows x64 # Release 的标题
+        body: | # Release 的描述
+          Compiled OpenSSL ${{ github.event.inputs.openssl_version }} for Windows x64 (VC-WIN64A).
+          Includes updated CA certificates with custom ServBay CAs appended.
+          Build configuration: no-shared, no-tests
+        files: ${{ env.ZIP_FILE_PATH }} # 需要上传的文件路径
+        fail_on_unmatched_files: true # 如果找不到文件则失败
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 使用 GitHub 自动提供的 Token
