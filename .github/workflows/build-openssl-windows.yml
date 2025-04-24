@@ -83,7 +83,6 @@ jobs:
       run: |
         choco install strawberryperl nasm --yes --no-progress --limit-output
         choco feature enable -n=allowGlobalConfirmation # 避免 choco 弹出确认提示
-        # 将 Perl 和 NASM 添加到 PATH (通常 Chocolatey 会自动完成，但显式添加更保险)
         echo "C:\Strawberry\c\bin;C:\Strawberry\perl\site\bin;C:\Strawberry\perl\bin;C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       shell: pwsh
 
@@ -100,27 +99,22 @@ jobs:
       shell: cmd # 使用 cmd 来方便地调用 vcvars64.bat
       working-directory: ${{ env.SOURCE_DIR }} # 进入源码目录
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" # 设置 MSVC x64 环境
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         perl Configure VC-WIN64A no-shared no-tests --prefix="%INSTALL_DIR%" --openssldir="%INSTALL_DIR%/ssl"
-        # VC-WIN64A: 目标为 64 位 Windows
-        # no-shared: 静态编译 (如果需要动态库，移除此选项)
-        # no-tests: 不编译测试，加快速度
-        # --prefix: 指定 make install 的安装目录
-        # --openssldir: 指定 openssl 配置、证书等文件的目录
 
     - name: Compile OpenSSL # 编译 OpenSSL
       shell: cmd
       working-directory: ${{ env.SOURCE_DIR }}
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" # 确保 MSVC 环境
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         nmake
 
     - name: Install OpenSSL # 安装 OpenSSL 到指定目录
       shell: cmd
       working-directory: ${{ env.SOURCE_DIR }}
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" # 确保 MSVC 环境
-        nmake install_sw # 只安装软件组件，不安装文档
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        nmake install_sw
 
     - name: Update CA certificates # 更新 CA 证书并追加自定义 CA
       shell: pwsh
@@ -164,8 +158,8 @@ jobs:
       run: |
         $zipFileName = "openssl-${{ github.event.inputs.openssl_version }}-win-x64.zip"
         Compress-Archive -Path ${{ env.INSTALL_DIR }}\* -DestinationPath ${{ env.GITHUB_WORKSPACE }}/$zipFileName
-        echo "ZIP_FILE_NAME=$zipFileName" >> $env:GITHUB_ENV # 将 zip 文件名输出到环境变量，供后续步骤使用
-        echo "ZIP_FILE_PATH=${{ env.GITHUB_WORKSPACE }}/$zipFileName" >> $env:GITHUB_ENV # 将 zip 文件路径输出到环境变量
+        echo "ZIP_FILE_NAME=$zipFileName" >> $env:GITHUB_ENV
+        echo "ZIP_FILE_PATH=${{ env.GITHUB_WORKSPACE }}/$zipFileName" >> $env:GITHUB_ENV
 
     - name: Create GitHub Release # 创建 GitHub Release 并上传 ZIP 文件
       uses: softprops/action-gh-release@v2 # 使用社区流行的 Release Action
