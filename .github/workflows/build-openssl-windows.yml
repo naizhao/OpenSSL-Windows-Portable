@@ -10,7 +10,8 @@ on:
 
 env:
   # 安装目录，编译结果将放在这里
-  INSTALL_DIR: ${{ github.workspace }}/openssl_install
+  # INSTALL_DIR: ${{ github.workspace }}/openssl_install
+  INSTALL_DIR: C:/ServBay/packages/openssl
   # OpenSSL 源码目录
   SOURCE_DIR: ${{ github.workspace }}/openssl_src
   # 自定义 CA 证书内容
@@ -100,7 +101,7 @@ jobs:
       working-directory: ${{ env.SOURCE_DIR }} # 进入源码目录
       run: |
         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        perl Configure VC-WIN64A no-shared no-tests --prefix="%INSTALL_DIR%" --openssldir="./ssl"
+        perl Configure VC-WIN64A no-shared no-tests --prefix="%INSTALL_DIR%" --openssldir="C:/ServBay/ssl"
 
     - name: Compile OpenSSL # 编译 OpenSSL
       shell: cmd
